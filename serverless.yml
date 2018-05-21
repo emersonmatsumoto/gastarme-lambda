@@ -1,0 +1,225 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: gastarme-wallet
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+custom:
+  WALLET_TABLE: gastarme-wallet-${opt:stage, self:provider.stage}
+  CREDITCARD_TABLE: gastarme-creditcard-${opt:stage, self:provider.stage}
+  ORDER_TABLE: gastarme-order-${opt:stage, self:provider.stage}
+  COGNITO: arn:aws:cognito-idp:us-east-1:015734119235:userpool/us-east-1_EIhqTDJiX
+
+provider:
+  name: aws
+  runtime: nodejs6.10
+  memorySize: 128
+  environment:
+    WALLET_TABLE: ${self:custom.WALLET_TABLE}
+    CREDITCARD_TABLE: ${self:custom.CREDITCARD_TABLE}
+    ORDER_TABLE: ${self:custom.ORDER_TABLE}
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: 
+        - arn:aws:dynamodb:*:*:table/${self:custom.WALLET_TABLE}
+        - arn:aws:dynamodb:*:*:table/${self:custom.CREDITCARD_TABLE}
+        - arn:aws:dynamodb:*:*:table/${self:custom.ORDER_TABLE}
+    - Effect: Allow
+      Action:
+        - kinesis:PutRecord
+        - kinesis:PutRecords
+        - kinesis:DescribeStream
+        - kinesis:GetShardIterator
+      Resource: arn:aws:kinesis:*:*:stream/gastarme-order-dev
+
+functions:
+  orderCreated:
+    handler: walletHandler.orderCreated
+    events:
+      - stream:
+          arn: arn:aws:kinesis:us-east-1:015734119235:stream/gastarme-order-dev
+          batchSize: 100
+          startingPosition: LATEST
+          enabled: true
+  getWallet:
+    handler: walletHandler.getWallet
+    events:
+      - http:
+          path: wallets
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorizer
+            arn: ${self:custom.COGNITO}
+            claims:
+              - email
+  listCreditCard:
+    handler: creditCardHandler.listCreditCard
+    events:
+      - http:
+          path: creditcards
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorizer
+            arn: ${self:custom.COGNITO}
+            claims:
+              - email
+  deleteCreditCard:
+    handler: creditCardHandler.deleteCreditCard
+    events:
+      - http:
+          path: creditcards/{id}
+          method: delete
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorizer
+            arn: ${self:custom.COGNITO}
+            claims:
+              - email
+  createCreditCard:
+    handler: creditCardHandler.createCreditCard
+    events:
+      - http:
+          path: creditcards
+          method: post
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorizer
+            arn: ${self:custom.COGNITO}
+            claims:
+              - email
+  listOrder:
+    handler: orderHandler.listOrder
+    events:
+      - http:
+          path: orders
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorizer
+            arn: ${self:custom.COGNITO}
+            claims:
+              - email
+  createOrder:
+    handler: orderHandler.createOrder
+    events:
+      - http:
+          path: orders
+          method: post
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorizer
+            arn: ${self:custom.COGNITO}
+            claims:
+              - email
+resources:          
+  Resources:
+    walletTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:custom.WALLET_TABLE}
+        KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+        GlobalSecondaryIndexes:
+        - IndexName: EmailIndex
+          KeySchema:
+          - AttributeName: email
+            KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1         
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+    creditCardTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:custom.CREDITCARD_TABLE}
+        KeySchema:
+        - AttributeName: id
+          KeyType: HASH          
+        AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: walletId
+          AttributeType: S
+        GlobalSecondaryIndexes:
+        - IndexName: WalletIndex
+          KeySchema:
+          - AttributeName: walletId
+            KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1        
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+    orderTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:custom.ORDER_TABLE}
+        KeySchema:
+        - AttributeName: id
+          KeyType: HASH          
+        AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: walletId
+          AttributeType: S
+        GlobalSecondaryIndexes:
+        - IndexName: WalletIndex
+          KeySchema:
+          - AttributeName: walletId
+            KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1        
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+
+plugins:
+- serverless-offline

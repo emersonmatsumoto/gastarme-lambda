@@ -1,0 +1,23 @@
+{
+  "name": "gastarme-wallet",
+  "version": "1.0.0",
+  "description": "",
+  "main": "creditCardService.js",
+  "scripts": {
+    "start": "./node_modules/.bin/serverless offline -s dev",
+    "debug": "serverless offline -s dev",
+    "test": "mocha"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "moment": "^2.22.1",
+    "uuid": "^3.2.1",
+    "uuid-validate": "0.0.2"
+  },
+  "devDependencies": {
+    "serverless": "^1.27.2",
+    "serverless-offline": "^3.21.1"
+  }
+}
