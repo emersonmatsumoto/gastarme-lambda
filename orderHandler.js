@@ -57,11 +57,13 @@ module.exports.createOrder = (event, context, callback) => {
 		return callback(null, { statusCode: 400, body: { message: 'Não foi possível obter o e-mail ' } });		
 	}
 	
-	let email = event.cognitoPoolClaims.email;
-	let requestBody = event.body;
+	console.log(JSON.stringify(event));
 
-	if (!requestBody.description || !requestBody.total) {
-		console.log(JSON.stringify(requestBody));
+	let email = event.cognitoPoolClaims.email;
+	let order = event.body;
+
+	if (!order.description || !order.total) {
+		console.log(JSON.stringify(order));
 		return callback(null, { statusCode: 400, body: JSON.stringify({ error: 'Todos os campos são obrigatórios' }) });
 	}
 	
@@ -74,46 +76,13 @@ module.exports.createOrder = (event, context, callback) => {
 
 		return walletService.getWallet(id);
 	}).then(wallet => {
-		if(!wallet || wallet.limit < requestBody.total) {
+		if(!wallet || wallet.availableCredit < order.total) {
 			return callback(null, { statusCode: 400, body: { message: `Limite menor que o valor da compra`}});									
 		}
 
 		return creditCardService.listCreditCard(wallet.id);
 	}).then(creditCards => {
-		let total = requestBody.total;
-		let promises = [];
-		
-		creditCards.sort(
-			function(a, b)
-			{
-				if (a.paydayDate < b.paydayDate) {            // a comes first
-					return -1
-				} else if (b.paydayDate < a.paydayDate) {     // b comes first
-					return 1
-				} else {                // equal, so order is irrelevant					
-					return a.limit - b.limit            // note: sort is not necessarily stable in JS
-				}
-			}
-		);
-		
-		for (let creditCard of creditCards) {
-			if (total === 0) {
-				break;
-			}
-			if (total > creditCard.limit) {
-				requestBody.total = creditCard.limit;
-				total -= creditCard.limit;
-			} else {
-				requestBody.total = total;
-			}
-			requestBody.walletId = creditCard.walletId;
-			requestBody.creditCardId = creditCard.id;
-			requestBody.date = new Date().toISOString();
-			promises.push(orderService.create(requestBody));
-			promises.push(walletService.updateAvailableCredit(creditCard.walletId, total));
-		}
-
-		return Promise.all(promises);
+		return processOrder(creditCards, order);
 	}).then(data => {		
 		callback(null, { statusCode: 201, body: "" });
 	}).catch(error => {
@@ -122,3 +91,42 @@ module.exports.createOrder = (event, context, callback) => {
 	});
 };
 
+function processOrder(creditCards, order){
+	let total = order.total;
+	let promises = [];
+
+	console.log(JSON.stringify(creditCards));	
+	creditCards.sort(sortCreditCard);
+	console.log(JSON.stringify(creditCards));
+	
+	for (let creditCard of creditCards) {
+		if (total === 0) {
+			break;
+		}
+		if (total > creditCard.availableCredit) {
+			order.total = creditCard.availableCredit;
+			total -= creditCard.availableCredit;
+		} else {
+			order.total = total;
+			total = 0;
+		}
+		order.walletId = creditCard.walletId;
+		order.creditCardId = creditCard.id;
+		order.date = new Date().toISOString();
+		promises.push(orderService.create(order));
+		promises.push(creditCardService.updateAvailableCredit(creditCard.id, order.total));
+		promises.push(walletService.updateAvailableCredit(creditCard.walletId, order.total));
+	}
+
+	return Promise.all(promises);
+}
+
+function sortCreditCard(a, b) {
+	if (a.paydayDate > b.paydayDate) {            
+		return -1
+	} else if (b.paydayDate > a.paydayDate) {     
+		return 1
+	} else {               
+		return a.availableCredit - b.availableCredit
+	}
+}

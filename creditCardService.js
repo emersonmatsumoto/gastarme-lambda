@@ -30,6 +30,7 @@ class CreditCardService {
 				creditCard.expiryDate = item.expiryDate.S;
 				creditCard.cvv = Number(item.cvv.N);
 				creditCard.limit = Number(item.limit.N);	
+				creditCard.availableCredit = Number(item.availableCredit.N);
 				creditCard.payday = Number(item.payday.N);	
 				creditCard.paydayDate = moment().startOf('day');
 				
@@ -60,6 +61,7 @@ class CreditCardService {
 				expiryDate: { S: creditCard.expiryDate },
 				cvv: { N: creditCard.cvv.toString() },
 				limit: { N: creditCard.limit.toString() },
+				availableCredit: { N: creditCard.limit.toString() },
 				payday: { N: creditCard.payday.toString() }
 			}
 		};
@@ -69,6 +71,24 @@ class CreditCardService {
 
 			return { id: id };
 		});
+	}
+
+	updateAvailableCredit(id, orderTotal) {
+		var params = {
+			TableName: this.tableName,
+			Key: { // a map of attribute name to AttributeValue for all primary key attributes
+				id: { S: id }
+			},
+			UpdateExpression: 'SET #a = #a - :availableCredit',
+			ExpressionAttributeNames: {
+				'#a' : 'availableCredit'
+			},
+			ExpressionAttributeValues: {
+				':availableCredit': { N: orderTotal.toString() }
+			}			
+		};
+		
+		return this.dynamoDb.updateItem(params).promise();
 	}
 
 	deleteCreditCard(id) {
