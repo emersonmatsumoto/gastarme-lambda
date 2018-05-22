@@ -45,11 +45,11 @@ module.exports.getWallet = (event, context, callback) => {
 	}
 	var email = event.cognitoPoolClaims.email;
 	
-	walletService.getWalletId(email).then(data => {
+	walletService.getId(email).then(data => {
 		if (!data) {
-			return walletService.createWallet(email);
+			return walletService.create(email);
 		} else {
-			return walletService.getWallet(data);
+			return walletService.get(data);
 		}
 	}).then(data => {		
 		callback(null, data);

@@ -6,7 +6,7 @@ const CreditCardService = require('./creditCardService.js');
 const WalletService = require('./walletService.js');
 const uuidvalidator = require('uuid-validate');
 const eventsToWatch = [
-    'order.created'
+	'order.created'
 ];
 let dynamoDb;
 let dynamoDbWallet;
@@ -30,33 +30,33 @@ let creditCardService = new CreditCardService(dynamoDbCreditCard, process.env.CR
 
 module.exports.listOrder = (event, context, callback) => {
 	context.callbackWaitsForEmptyEventLoop = false;
-	
+
 	if (!event.cognitoPoolClaims || !event.cognitoPoolClaims.email) {
 		console.log(JSON.stringify(event));
-		return callback(null, { statusCode: 400, body: { message: 'Não foi possível obter o e-mail ' } });		
+		return callback(null, { statusCode: 400, body: { message: 'Não foi possível obter o e-mail ' } });
 	}
-	
+
 	let email = event.cognitoPoolClaims.email;
-	
-	walletService.getWalletId(email)
-	.then(id => {
-		if (!id) {
-			console.log(id);
-			callback(null, { statusCode: 404, body: { message: `Não existe wallet para ${email}`}});			
-		}
-		return orderService.list(id);
-	}).then(data => {
-		callback(null, data);
-	}).catch(error => callback(JSON.stringify({ error: error })));
-		
+
+	walletService.getId(email)
+		.then(id => {
+			if (!id) {
+				console.log(id);
+				callback(null, { statusCode: 404, body: { message: `Não existe wallet para ${email}` } });
+			}
+			return orderService.list(id);
+		}).then(data => {
+			callback(null, data);
+		}).catch(error => callback(JSON.stringify({ error: error })));
+
 };
 
 module.exports.createOrder = (event, context, callback) => {
 	if (!event.cognitoPoolClaims || !event.cognitoPoolClaims.email) {
 		console.log(JSON.stringify(event));
-		return callback(null, { statusCode: 400, body: { message: 'Não foi possível obter o e-mail ' } });		
+		return callback(null, { statusCode: 400, body: { message: 'Não foi possível obter o e-mail ' } });
 	}
-	
+
 	console.log(JSON.stringify(event));
 
 	let email = event.cognitoPoolClaims.email;
@@ -64,45 +64,52 @@ module.exports.createOrder = (event, context, callback) => {
 
 	if (!order.description || !order.total) {
 		console.log(JSON.stringify(order));
-		return callback(null, { statusCode: 400, body: JSON.stringify({ error: 'Todos os campos são obrigatórios' }) });
+		callback({ statusCode: "[400]", errorMessage: 'Todos os campos são obrigatórios | Valor deve ser maior que 0' });
+	} else {
+
+		walletService.getId(email)
+			.then(id => {
+				if (!id) {
+					console.log(id);
+					throw `Não existe wallet para ${email}`;
+				}
+
+				return walletService.get(id);
+			}).then(wallet => {
+				if (!wallet || wallet.availableCredit < order.total) {
+					console.log(JSON.stringify(wallet));
+					throw `Limite não disponível`;
+				}
+
+				return creditCardService.list(wallet.id);
+			}).then(creditCards => {
+				return processOrder(creditCards, order);
+			}).then(data => {
+				callback(null, { statusCode: 201, body: "" });
+			}).catch(error => {
+				console.log('Error creating order. ' + error);
+				callback(JSON.stringify({ statusCode: "[400]", errorMessage: error }));
+			});
 	}
-	
-	walletService.getWalletId(email)
-	.then(id => {
-		if (!id) {
-			console.log(id);
-			callback(null, { statusCode: 404, body: { message: `Não existe wallet para ${email}`}});			
-		}
-
-		return walletService.getWallet(id);
-	}).then(wallet => {
-		if(!wallet || wallet.availableCredit < order.total) {
-			return callback(null, { statusCode: 400, body: { message: `Limite menor que o valor da compra`}});									
-		}
-
-		return creditCardService.listCreditCard(wallet.id);
-	}).then(creditCards => {
-		return processOrder(creditCards, order);
-	}).then(data => {		
-		callback(null, { statusCode: 201, body: "" });
-	}).catch(error => {
-		console.log('Error creating order. ' + error);
-		callback(JSON.stringify({ error: error }));
-	});
 };
 
-function processOrder(creditCards, order){
+function processOrder(creditCards, order) {
 	let total = order.total;
 	let promises = [];
 
-	console.log(JSON.stringify(creditCards));	
-	creditCards.sort(sortCreditCard);
 	console.log(JSON.stringify(creditCards));
+	creditCards = creditCards.filter(function(item){
+		return item.availableCredit > 0;
+	});
+	creditCards.sort(sortCreditCard);
 	
+	console.log(JSON.stringify(creditCards));
+
 	for (let creditCard of creditCards) {
-		if (total === 0) {
+		if (total === 0 || creditCard.availableCredit <= 0) {
 			break;
 		}
+		console.log(JSON.stringify(order));
 		if (total > creditCard.availableCredit) {
 			order.total = creditCard.availableCredit;
 			total -= creditCard.availableCredit;
@@ -122,11 +129,11 @@ function processOrder(creditCards, order){
 }
 
 function sortCreditCard(a, b) {
-	if (a.paydayDate > b.paydayDate) {            
+	if (a.paydayDate > b.paydayDate) {
 		return -1
-	} else if (b.paydayDate > a.paydayDate) {     
+	} else if (b.paydayDate > a.paydayDate) {
 		return 1
-	} else {               
+	} else {
 		return a.availableCredit - b.availableCredit
 	}
 }

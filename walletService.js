@@ -8,7 +8,7 @@ class WalletService {
 		this.tableName = tableName;
 	}
 
-	getWalletId(email) {
+	getId(email) {
 		const params = {
 			TableName: this.tableName,
 			IndexName: 'EmailIndex',
@@ -25,7 +25,7 @@ class WalletService {
 		});
 	}
 
-	getWallet(id) {
+	get(id) {
 		var params = {
 			TableName: this.tableName,
 			Key: { // a map of attribute name to AttributeValue for all primary key attributes
@@ -77,6 +77,26 @@ class WalletService {
 			},
 			ExpressionAttributeValues: {
 				':availableCredit': { N: orderTotal.toString() }
+			}			
+		};
+		
+		return this.dynamoDb.updateItem(params).promise();
+	}
+
+	removeLimitAvailableCredit(id, limit, availableCredit) {
+		var params = {
+			TableName: this.tableName,
+			Key: { // a map of attribute name to AttributeValue for all primary key attributes
+				id: { S: id }
+			},
+			UpdateExpression: 'SET #c = #c - :creditLimit, #a = #a - :availableCredit',
+			ExpressionAttributeNames: {
+				'#c' : 'creditLimit',
+				'#a' : 'availableCredit'
+			},
+			ExpressionAttributeValues: {
+				':creditLimit': { N: limit.toString() },
+				':availableCredit': { N: availableCredit.toString() }
 			}			
 		};
 		

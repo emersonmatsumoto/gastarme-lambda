@@ -9,7 +9,37 @@ class CreditCardService {
 		this.tableName = tableName;
 	}
 
-	listCreditCard(walletId) {
+	get(id) {
+		var params = {
+			TableName: this.tableName,
+			Key: { // a map of attribute name to AttributeValue for all primary key attributes
+				id: { S: id }
+			}
+		};
+		return this.dynamoDb.getItem(params).promise().then(function (item) {
+			let creditCard = {};
+			creditCard.id = item.id.S;
+			creditCard.walletId = item.walletId.S;
+			creditCard.name = item.name.S;
+			creditCard.cardNumber = item.cardNumber.S;
+			creditCard.expiryDate = item.expiryDate.S;
+			creditCard.cvv = Number(item.cvv.N);
+			creditCard.limit = Number(item.limit.N);	
+			creditCard.availableCredit = Number(item.availableCredit.N);
+			creditCard.payday = Number(item.payday.N);	
+			creditCard.paydayDate = moment().startOf('day');
+			
+			creditCard.paydayDate.set('date', creditCard.payday);
+			
+			if (creditCard.paydayDate < moment()) {
+				creditCard.paydayDate.add(1, 'month');
+			} 
+
+			return creditCard;
+		});
+	}
+
+	list(walletId) {
 		const params = {
 			TableName: this.tableName,
 			//IndexName: 'WalletIndex',
@@ -40,7 +70,6 @@ class CreditCardService {
 					creditCard.paydayDate.add(1, 'month');
 				} 
 
-				console.log('p:' + creditCard.payday + ',d:' + creditCard.paydayDate.toString());
 				creditCards.push(creditCard);
 			}
 
@@ -48,7 +77,7 @@ class CreditCardService {
 		});
 	}
 
-	createCreditCard(creditCard) {
+	create(creditCard) {
 		let id = uuidv4();
 
 		var params = {
@@ -91,7 +120,7 @@ class CreditCardService {
 		return this.dynamoDb.updateItem(params).promise();
 	}
 
-	deleteCreditCard(id) {
+	delete(id) {
 		var params = {
 			TableName: this.tableName,
 			Key: {
