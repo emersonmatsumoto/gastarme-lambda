@@ -16,9 +16,10 @@ class CreditCardService {
 				id: { S: id }
 			}
 		};
-		return this.dynamoDb.getItem(params).promise().then(function (item) {
+		return this.dynamoDb.getItem(params).promise().then(function (data) {			
+			let item = data.Item;
 			let creditCard = {};
-			creditCard.id = item.id.S;
+			creditCard.id = id;
 			creditCard.walletId = item.walletId.S;
 			creditCard.name = item.name.S;
 			creditCard.cardNumber = item.cardNumber.S;
