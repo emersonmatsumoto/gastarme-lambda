@@ -150,7 +150,7 @@ class WalletService {
 		return this.dynamoDb.updateItem(params).promise();
 	}
 
-	createWallet(email) {
+	create(email) {
 		let id = uuidv4();
 
 		var params = {

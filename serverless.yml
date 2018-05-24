@@ -63,6 +63,19 @@ functions:
           batchSize: 100
           startingPosition: LATEST
           enabled: true
+  createWallet:
+    handler: walletHandler.createWallet
+    events:
+      - http:
+          path: wallets
+          method: post
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorizer
+            arn: ${self:custom.COGNITO}
+            claims:
+              - email
   getWallet:
     handler: walletHandler.getWallet
     events:

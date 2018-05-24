@@ -26,7 +26,13 @@ module.exports.createWallet = (event, context, callback) => {
 	}
 	var email = event.cognitoPoolClaims.email;
 	
-	walletService.create(email).then(data => {		
+	walletService.getId(email).then(id => {
+		if (id) {
+			console.log(id);
+			throw 'Usuário já possui uma carteira.';
+		}
+		return walletService.create(email);
+	}).then(data => {		
 		callback(null, data);
 	}).catch(function (error) {
 		console.log("createWallet - " + JSON.stringify({ error: error }));
