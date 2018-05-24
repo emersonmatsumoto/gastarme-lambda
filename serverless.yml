@@ -67,6 +67,19 @@ functions:
     handler: walletHandler.getWallet
     events:
       - http:
+          path: wallets/{id}
+          method: get
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorizer
+            arn: ${self:custom.COGNITO}
+            claims:
+              - email
+  listWallet:
+    handler: walletHandler.listWallet
+    events:
+      - http:
           path: wallets
           method: get
           cors: true

@@ -18,44 +18,66 @@ if (process.env.dynamoDbEndpoint) {
 
 let walletService = new WalletService(dynamoDb, process.env.WALLET_TABLE);
 
-module.exports.orderCreated = (event, context, callback) => {	
-	const list = event.Records;
 
-	const iteratee = (record, cb) => {
-  
-	  // Kinesis data is base64 encoded so decode here
-	  let retrievedRecord = new Buffer(record.kinesis.data, 'base64').toString();
-	  let universityInfo = JSON.parse(retrievedRecord);
-	  console.log('Pushing to algolia: ' + universityInfo.name + universityInfo.course.name);
-  
-	 
-	};
-  
-	eachOf(list, iteratee, function(err) {
-	  if (err) callback(err);
-  
-	  callback(null, "Number of records pushed to algolia : " + list.length);
+module.exports.createWallet = (event, context, callback) => {
+	if (!event.cognitoPoolClaims || !event.cognitoPoolClaims.email) {
+		console.log(JSON.stringify(event));
+		return callback(JSON.stringify({ statusCode: "[400]", errorMessage: 'Não foi possível obter o e-mail ' }));		
+	}
+	var email = event.cognitoPoolClaims.email;
+	
+	walletService.create(email).then(data => {		
+		callback(null, data);
+	}).catch(function (error) {
+		console.log("createWallet - " + JSON.stringify({ error: error }));
+		callback(JSON.stringify({ statusCode: "[400]", errorMessage: error }));
 	});
 };
 
 module.exports.getWallet = (event, context, callback) => {
 	if (!event.cognitoPoolClaims || !event.cognitoPoolClaims.email) {
 		console.log(JSON.stringify(event));
-		return callback(null, { statusCode: 400, body: { message: 'Não foi possível obter o e-mail ' } });		
+		return callback(JSON.stringify({ statusCode: "[400]", errorMessage: 'Não foi possível obter o e-mail ' }));		
 	}
 	var email = event.cognitoPoolClaims.email;
 	
-	walletService.getId(email).then(data => {
-		if (!data) {
-			return walletService.create(email);
+	walletService.get(event.path.id).then(data => {		
+		if (data.email != email) {
+			console.log("getWallet - " + JSON.stringify({ error: data }));
+			callback(JSON.stringify({ statusCode: "[403]", errorMessage: "Proibido" }));		
 		} else {
-			return walletService.get(data);
+			callback(null, data);
 		}
-	}).then(data => {		
-		callback(null, data);
 	}).catch(function (error) {
 		console.log("getWallet - " + JSON.stringify({ error: error }));
-		callback(JSON.stringify({ error: error }));
+		callback(JSON.stringify({ statusCode: "[400]", errorMessage: error }));
 	});
 };
+
+module.exports.listWallet = (event, context, callback) => {
+	if (!event.cognitoPoolClaims|| !event.cognitoPoolClaims.email) {
+		console.log(JSON.stringify(event));
+		return callback(JSON.stringify({ statusCode: "[400]", errorMessage: 'Não foi possível obter o e-mail ' }));	
+	}
+	console.log(JSON.stringify(event))
+	if (event.query.all){
+		walletService.listAll().then(data => {		
+			callback(null, data);
+		}).catch(function (error) {
+			console.log("getWallet all - " + JSON.stringify({ error: error }));
+			callback(JSON.stringify({ error: error }));
+		});
+	} else {
+		var email = event.cognitoPoolClaims.email;
+	
+		walletService.list(email).then(data => {		
+			callback(null, data);
+		}).catch(function (error) {
+			console.log("getWallet - " + JSON.stringify({ error: error }));	
+			callback(JSON.stringify({ statusCode: "[400]", errorMessage: error }));
+		});
+	}
+	
+};
+
 

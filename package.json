@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "card-validator": "^5.0.0",
     "moment": "^2.22.1",
     "uuid": "^3.2.1",
     "uuid-validate": "0.0.2"

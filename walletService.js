@@ -8,6 +8,54 @@ class WalletService {
 		this.tableName = tableName;
 	}
 
+	listAll() {
+		const params = {
+			TableName: this.tableName,
+		};
+
+		return this.dynamoDb.scan(params).promise().then(function (data) {
+			console.log(JSON.stringify(data));
+			let wallets = [];
+			for (const key in data.Items) {
+				let item = data.Items[key];
+				let wallet = {};
+				wallet.id = item.id.S;
+				wallet.email = item.email.S;
+				wallet.creditLimit = Number(item.creditLimit.N);
+				wallet.availableCredit = Number(item.availableCredit.N);
+
+				wallets.push(wallet);
+			}
+
+			return wallets;
+		});
+	}
+
+	list(email) {
+		const params = {
+			TableName: this.tableName,
+			FilterExpression: 'email = :email',
+			ExpressionAttributeValues: {':email': {"S": email}}  
+		};
+
+		return this.dynamoDb.scan(params).promise().then(function (data) {
+			console.log(JSON.stringify(data));
+			let wallets = [];
+			for (const key in data.Items) {
+				let item = data.Items[key];
+				let wallet = {};
+				wallet.id = item.id.S;
+				wallet.email = item.email.S;
+				wallet.creditLimit = Number(item.creditLimit.N);
+				wallet.availableCredit = Number(item.availableCredit.N);
+
+				wallets.push(wallet);
+			}
+
+			return wallets;
+		});
+	}
+
 	getId(email) {
 		const params = {
 			TableName: this.tableName,
@@ -39,7 +87,6 @@ class WalletService {
 			wallet.email = data.Item.email.S;
             wallet.creditLimit = Number(data.Item.creditLimit.N);
             wallet.availableCredit = Number(data.Item.availableCredit.N);
-
 
 			return wallet;
 		});
