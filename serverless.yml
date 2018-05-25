@@ -102,6 +102,21 @@ functions:
             arn: ${self:custom.COGNITO}
             claims:
               - email
+              - cognito:groups
+  deleteWallet:
+    handler: walletHandler.deleteWallet
+    events:
+      - http:
+          path: wallets/{id}
+          method: delete
+          cors: true
+          integration: lambda
+          authorizer:
+            name: authorizer
+            arn: ${self:custom.COGNITO}
+            claims:
+              - email
+              - cognito:groups              
   listCreditCard:
     handler: creditCardHandler.listCreditCard
     events:

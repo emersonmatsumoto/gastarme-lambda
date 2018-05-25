@@ -102,6 +102,8 @@ module.exports.deleteCreditCard = (event, context, callback) => {
 	}).then(data => {
 		console.log('orderService.deleteCreditCard');
 		return creditCardService.delete(event.path.id);
+	}).then(() => {
+		callback(null, { statusCode: 201, body: "" });
 	}).catch(function (error) {
 		console.log('[400] - Error deleting credit card. ' + error);
 		callback('[400] - Error deleting credit card. ' + error);

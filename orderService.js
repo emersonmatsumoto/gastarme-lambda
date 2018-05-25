@@ -85,7 +85,7 @@ class OrderService {
 		});
 	}
 
-	deleteBatch(orders) {
+	deleteBatch(orders) {		
 		let items = [];
 		for (let order of orders) {
 			items.push({

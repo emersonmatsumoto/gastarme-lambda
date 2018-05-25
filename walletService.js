@@ -175,6 +175,17 @@ class WalletService {
 			};
 		});
 	}
+
+	delete(id) {
+		var params = {
+			TableName: this.tableName,
+			Key: {
+				id: { S: id }
+			}
+		};
+
+		return this.dynamoDb.deleteItem(params).promise();
+	}
 }
 
 module.exports = WalletService;

@@ -2,6 +2,7 @@
 
 const uuidv4 = require('uuid/v4');
 const moment = require('moment');
+const AWS = require('aws-sdk');
 
 class CreditCardService {
 	constructor(dynamoDb, tableName) {
@@ -130,6 +131,28 @@ class CreditCardService {
 		};
 
 		return this.dynamoDb.deleteItem(params).promise();
+	}
+
+	deleteBatch(creditCards) {
+		let items = [];
+		for (let creditCard of creditCards) {
+			items.push({
+				DeleteRequest : {
+					Key: {
+						id: creditCard.id 
+					}
+				}				
+			});
+		}
+
+		var params = {
+			RequestItems : {
+				[this.tableName] : items
+			}
+		};
+		
+
+		return new AWS.DynamoDB.DocumentClient().batchWrite(params).promise();
 	}
 }
 
