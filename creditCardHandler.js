@@ -6,6 +6,7 @@ const CreditCardService = require('./creditCardService.js');
 const WalletService = require('./walletService.js');
 const OrderService = require('./orderService.js');
 const uuidvalidator = require('uuid-validate');
+const validator = require('validator');
 const eventsToWatch = [
     'order.created'
 ];
@@ -64,25 +65,31 @@ module.exports.createCreditCard = (event, context, callback) => {
 	if (!requestBody.description || !requestBody.name || !requestBody.cardNumber || !requestBody.cvv || !requestBody.expiryDate || !requestBody.limit) {
 		console.log(JSON.stringify(requestBody));
 		return callback(JSON.stringify({ statusCode: "[400]", errorMessage: 'Todos os campos são obrigatórios' }));
-	}
+	} else if (!validator.isCreditCard(requestBody.cardNumber)) {
+		console.log(requestBody.cardNumber);
+		return callback(JSON.stringify({ statusCode: "[400]", errorMessage: 'Número de cartão inválido' }));
+	} else if (!validateDate(requestBody.expiryDate)) {
+		console.log(requestBody.expiryDate);
+		return callback(JSON.stringify({ statusCode: "[400]", errorMessage: 'Cartão expirado ou data inválida' }));
+	} else {
+		walletService.getId(email)
+		.then(id => {
+			if (!id) {
+				console.log(id);
+				callback(JSON.stringify({ statusCode: "[404]", errorMessage: `Não existe wallet para ${email}`}));			
+			}
+			requestBody.walletId = id;
 	
-	walletService.getId(email)
-	.then(id => {
-		if (!id) {
-			console.log(id);
-			callback(JSON.stringify({ statusCode: "[404]", errorMessage: `Não existe wallet para ${email}`}));			
-		}
-		requestBody.walletId = id;
-
-		return creditCardService.create(requestBody);
-	}).then(data => {
-		walletService.updateCreditLimit(requestBody.walletId, requestBody.limit).then(function(){
-            callback(null, { statusCode: 201, body: "" });
-        }); 
-	}).catch(error => {
-		console.log('[400] - Error creating credit card. ' + error);
-		callback('[400] - Error creating credit card. ' + error);
-	});
+			return creditCardService.create(requestBody);
+		}).then(data => {
+			walletService.updateCreditLimit(requestBody.walletId, requestBody.limit).then(function(){
+				callback(null, { statusCode: 201, body: "" });
+			}); 
+		}).catch(error => {
+			console.log('[400] - Error creating credit card. ' + error);
+			callback('[400] - Error creating credit card. ' + error);
+		});
+	}
 };
 
 module.exports.deleteCreditCard = (event, context, callback) => {	
@@ -109,3 +116,21 @@ module.exports.deleteCreditCard = (event, context, callback) => {
 		callback('[400] - Error deleting credit card. ' + error);
 	});
 };
+
+function validateDate(expiryDate) {
+	let date = expiryDate.split("/");
+	if (date.length < 2) {
+		return false;
+	}
+
+	let year = parseInt("20" + date[1]);
+	let month = parseInt(date[0]); // 0 - jan | 1 - fev ... data do primeiro dia do próximo mes
+	let expiry = new Date(year, month); 
+	let today = new Date();
+
+	if (expiry < today) {
+		return false;
+	}
+
+	return true;
+}
