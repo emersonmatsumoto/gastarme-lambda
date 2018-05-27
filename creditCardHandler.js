@@ -71,6 +71,9 @@ module.exports.createCreditCard = (event, context, callback) => {
 	} else if (!validateDate(requestBody.expiryDate)) {
 		console.log(requestBody.expiryDate);
 		return callback(JSON.stringify({ statusCode: "[400]", errorMessage: 'Cartão expirado ou data inválida' }));
+	} else if (requestBody.payday < 1 || requestBody.payday > 31){
+		console.log(requestBody.payday);
+		return callback(JSON.stringify({ statusCode: "[400]", errorMessage: 'Dia do pagamento inválido' }));
 	} else {
 		walletService.getId(email)
 		.then(id => {
@@ -105,6 +108,9 @@ module.exports.deleteCreditCard = (event, context, callback) => {
 		return orderService.listByCreditCard(event.path.id);
 	}).then(orders => {
 		console.log(JSON.stringify(orders));		
+		if (orders.length === 0) {
+			return Promise.resolve(true);
+		}
 		return orderService.deleteBatch(orders);		
 	}).then(data => {
 		console.log('orderService.deleteCreditCard');
@@ -123,8 +129,14 @@ function validateDate(expiryDate) {
 		return false;
 	}
 
-	let year = parseInt("20" + date[1]);
-	let month = parseInt(date[0]); // 0 - jan | 1 - fev ... data do primeiro dia do próximo mes
+	let yearString = date[1].trim();
+	let year = 0;
+	if (yearString.length > 2) {
+		year = parseInt(yearString)
+	} else {
+		year = parseInt("20" + yearString);
+	}
+	let month = parseInt(date[0].trim()); // 0 - jan | 1 - fev ... data do primeiro dia do próximo mes
 	let expiry = new Date(year, month); 
 	let today = new Date();
 
