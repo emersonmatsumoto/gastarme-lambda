@@ -119,6 +119,7 @@ function processOrder(creditCards, order) {
 		}
 		order.walletId = creditCard.walletId;
 		order.creditCardId = creditCard.id;
+		order.creditCardDescription = creditCard.description;
 		order.date = new Date().toISOString();
 		promises.push(orderService.create(order));
 		promises.push(creditCardService.updateAvailableCredit(creditCard.id, order.total));

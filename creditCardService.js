@@ -22,6 +22,7 @@ class CreditCardService {
 			let creditCard = {};
 			creditCard.id = id;
 			creditCard.walletId = item.walletId.S;
+			creditCard.description = item.description.S;
 			creditCard.name = item.name.S;
 			creditCard.cardNumber = item.cardNumber.S;
 			creditCard.expiryDate = item.expiryDate.S;
@@ -57,6 +58,7 @@ class CreditCardService {
 				let creditCard = {};
 				creditCard.id = item.id.S;
 				creditCard.walletId = item.walletId.S;
+				creditCard.description = item.description.S;
 				creditCard.name = item.name.S;
 				creditCard.cardNumber = item.cardNumber.S;
 				creditCard.expiryDate = item.expiryDate.S;
@@ -87,6 +89,7 @@ class CreditCardService {
 			Item: {
 				id: { S: id },
 				walletId: { S: creditCard.walletId },
+				description: { S: creditCard.description },
 				name: { S: creditCard.name },
 				cardNumber: { S: creditCard.cardNumber },
 				expiryDate: { S: creditCard.expiryDate },

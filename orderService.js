@@ -26,6 +26,7 @@ class OrderService {
 				order.id = item.id.S;
 				order.walletId = walletId;
 				order.creditCardId = item.creditCardId.S;
+				order.creditCardDescription = item.creditCardDescription.S;
 				order.description = item.description.S;
 				order.date = item.date.S;
 				order.total = Number(item.total.N);
@@ -53,6 +54,7 @@ class OrderService {
 				order.id = item.id.S;
 				order.walletId = item.walletId.S;
 				order.creditCardId = creditCardId;
+				order.creditCardDescription = item.creditCardDescription.S;
 				order.description = item.description.S;
 				order.date = item.date.S;
 				order.total = Number(item.total.N);
@@ -65,6 +67,7 @@ class OrderService {
 	}
 
 	create(order) {
+		console.log(JSON.stringify(order));
 		let id = uuidv4();
 		var params = {
 			TableName: this.tableName,
@@ -72,6 +75,7 @@ class OrderService {
 				id: { S: id },
 				walletId: { S: order.walletId },
 				creditCardId: { S: order.creditCardId },
+				creditCardDescription: { S: order.creditCardDescription },
 				description: { S: order.description },
 				date: { S: order.date },
 				total: { N: order.total.toString() }

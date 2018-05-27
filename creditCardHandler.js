@@ -61,7 +61,7 @@ module.exports.createCreditCard = (event, context, callback) => {
 	let email = event.cognitoPoolClaims.email;
 	let requestBody = event.body;
 
-	if (!requestBody.name || !requestBody.cardNumber || !requestBody.cvv || !requestBody.expiryDate || !requestBody.limit) {
+	if (!requestBody.description || !requestBody.name || !requestBody.cardNumber || !requestBody.cvv || !requestBody.expiryDate || !requestBody.limit) {
 		console.log(JSON.stringify(requestBody));
 		return callback(JSON.stringify({ statusCode: "[400]", errorMessage: 'Todos os campos são obrigatórios' }));
 	}
